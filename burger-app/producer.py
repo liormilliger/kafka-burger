@@ -71,8 +71,8 @@ def generate_random_order(menu, streets):
 
 def main():
     producer = KafkaProducer(
-        bootstrap_servers=["localhost:9092"],  # change if needed
-        value_serializer=lambda v: json.dumps(v).encode('utf-8')
+        bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
+        value_serializer=lambda v: json.dumps(v).encode("utf-8")
     )
 
     topic = "orders"
