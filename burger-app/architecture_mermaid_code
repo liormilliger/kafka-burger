@@ -1,0 +1,49 @@
+graph TD
+    %% Define styles for better contrast
+    classDef customer fill:#ADD8E6,stroke:#333,stroke-width:2px,color:#000; %% Light Blue, Black Text
+    classDef gateway fill:#90EE90,stroke:#333,stroke-width:2px,color:#000; %% Light Green, Black Text
+    classDef lambda fill:#FFD700,stroke:#333,stroke-width:2px,color:#000; %% Gold, Black Text
+    classDef dynamodb fill:#DDA0DD,stroke:#333,stroke-width:2px,color:#000; %% Plum, Black Text
+    classDef msk fill:#FFA07A,stroke:#333,stroke-width:2px,color:#000; %% Light Salmon, Black Text
+    classDef service fill:#B0C4DE,stroke:#333,stroke-width:2px,color:#000; %% Light Steel Blue, Black Text
+    classDef datastore fill:#F0E68C,stroke:#333,stroke-width:1px,color:#000; %% Khaki, Black Text
+    classDef integration fill:#87CEFA,stroke:#333,stroke-width:1px,color:#000; %% Light Sky Blue, Black Text
+
+    A[Customer App/Web]:::customer -- Places Order --> B(API Gateway):::gateway
+    B -- Invokes --> C(Order Placement Lambda):::lambda
+    C -- Produces Event: OrderReceived --> D(Amazon MSK Serverless - Kafka):::msk
+
+    subgraph Kafka Topics
+        D -- Topic: order_center_events --> E(Order Center Service):::service
+        D -- Topic: kitchen_events --> F(Kitchen Service):::service
+        D -- Topic: delivery_events --> G(Delivery Service):::service
+        D -- Topic: payment_events --> H(Payment Service):::service
+        D -- Topic: storage_events --> I(Storage Service):::service
+    end
+
+    subgraph Microservices & Data Stores
+        E(Order Center Service) --> E1(DynamoDB - Order Status):::datastore
+        E -- Produces Event: OrderStatusUpdate --> D
+
+        F(Kitchen Service) --> F1(DynamoDB - Kitchen Prep Status):::datastore
+        F -- Produces Event: DishReadyForDelivery --> D
+
+        G(Delivery Service) --> G1(DynamoDB - Delivery Status/ETA):::datastore
+        G -- Consumes Location/Order Updates --> D
+        G -- Produces Event: DeliveryPickedUp/Delivered --> D
+        G -- Integrates with --> G2(AWS Location Services - Distance/ETA Calc):::integration
+
+        H(Payment Service) --> H1(DynamoDB - Virtual Payments Ledger):::datastore
+        H -- Produces Event: PaymentProcessed/Failed --> D
+
+        I(Storage Service) --> I1(DynamoDB - Inventory/Costs):::datastore
+        I -- Produces Event: InventoryUpdate --> D
+    end
+
+    C -- Stores initial order --> C1(DynamoDB - Raw Orders):::datastore
+
+    D -- Lambda Triggers (Consumers) --> E
+    D -- Lambda Triggers (Consumers) --> F
+    D -- Lambda Triggers (Consumers) --> G
+    D -- Lambda Triggers (Consumers) --> H
+    D -- Lambda Triggers (Consumers) --> I
