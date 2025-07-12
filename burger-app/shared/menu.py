@@ -1,21 +1,21 @@
 # shared/menu.py
 
 MENU = {
-    "burger": {
+    "Burger": {
         "160g_single": 45,
         "160g_double": 60,
         "220g_single": 55,
         "220g_double": 80,
     },
-    "toppings": {
+    "Toppings": {
         "cheese": 3,
         "caramelised_onions": 3,
     },
-    "sides": {
+    "Sides": {
         "fries": 11,
         "sweet_potato_fries": 13,
     },
-    "drinks": {
+    "Drinks": {
         "water": 7,
         "coca_cola": 8,
         "juice": 8,

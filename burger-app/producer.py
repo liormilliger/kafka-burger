@@ -1,9 +1,15 @@
+import sys
+import os
 import random
 import json
 import time
 from datetime import datetime
 from kafka import KafkaProducer
-from shared.menu import MENU
+
+# Add the parent directory to the system path to allow importing from 'shared'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from shared.menu import MENU # This line should now work
 
 # Load Haifa streets list
 with open("data/haifa_streets.txt", "r") as f:
@@ -70,13 +76,22 @@ def generate_random_order(menu, streets):
     return order
 
 def main():
+    # Determine bootstrap_servers based on environment
+    # If running inside a Docker container on the same network, 'kafka:9094' or 'kafka:9092'
+    # If running on the host machine but Kafka is in Docker, 'localhost:9092'
+    # If connecting from another machine, it would be 'EC2_PUBLIC_IP:9092'
+    # For now, let's assume it's run on the EC2 host and connecting to the Docker-mapped port
+    # Or, if producer itself will be a docker container, then it would be 'kafka:9092'
+    kafka_bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+    
     producer = KafkaProducer(
-        bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
+        bootstrap_servers=kafka_bootstrap_servers,
         value_serializer=lambda v: json.dumps(v).encode("utf-8")
     )
 
-    topic = "orders"
+    topic = "orders" # Consider renaming this topic based on your architecture (e.g., "order_received_events")
     print("Starting order producer. Press Ctrl+C to exit.")
+    print(f"Connecting to Kafka at: {kafka_bootstrap_servers}")
     try:
         while True:
             order = generate_random_order(MENU, streets)
@@ -85,6 +100,8 @@ def main():
             time.sleep(3)  # wait 3 seconds before next order
     except KeyboardInterrupt:
         print("Producer stopped.")
+    finally:
+        producer.close() # Ensure producer is closed gracefully
 
 if __name__ == "__main__":
     main()
