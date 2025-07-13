@@ -5,17 +5,25 @@ services:
     image: bitnami/kafka:latest
     container_name: kafka
     ports:
-      - "9092:9092"
-      - "9094:9094"
+      - "9092:9092"  # Port for external clients (including producer on EC2 host, and your local machine)
+      - "9094:9094"  # Port for internal clients (Kafka-UI, future microservices)
     environment:
+      # Crucial for KRaft: A unique cluster ID. You can generate one or just use a fixed UUID.
+      KAFKA_KRAFT_CLUSTER_ID: "abcdefghijklmnopqrstuv" # Use a consistent 22-character base64 string
       KAFKA_ENABLE_KRAFT: "yes"
       KAFKA_CFG_PROCESS_ROLES: broker,controller
       KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
       KAFKA_CFG_NODE_ID: 1
       KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CFG_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_INTERNAL://0.0.0.0:9094
-      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://${EC2_PUBLIC_IP}:9092,PLAINTEXT_INTERNAL://kafka:9094
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      
+      # Define multiple listeners within the container
+      KAFKA_CFG_LISTENERS: CLIENT://0.0.0.0:9092,INTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093
+      
+      # Crucial: Advertise different URLs for different listeners
+      KAFKA_CFG_ADVERTISED_LISTENERS: CLIENT://${EC2_PUBLIC_IP}:9092,INTERNAL://kafka:9094
+      
+      # Map security protocols to listener names
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CLIENT:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_CFG_LOG_DIRS: /bitnami/kafka/data
     volumes:
@@ -28,10 +36,9 @@ services:
       - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9094
     depends_on:
       - kafka
 
 volumes:
   kafka-data:
-
